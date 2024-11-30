@@ -6,17 +6,20 @@ namespace Application
 {
     public class EmployeeRepository
     {
-        public static readonly string connectionString = "Server=localhost;Database=EmployeeDB;Trusted_Connection=False;User Id=sa;Password=ILyaoff12345@;TrustServerCertificate=True";
+        private static readonly string connectionString = "Server=localhost;Database=EmployeeDB;Trusted_Connection=False;User Id=sa;Password=ILyaoff12345@;TrustServerCertificate=True";
+        private static readonly string spGetAllEmployees = "spGetAllEmployees";
+        private static readonly string spGetEmployeeById = "spGetEmployeeById";
+        private static readonly string spAddEmployee = "spAddEmployee";
+        private static readonly string spUpdateEmployees = "spUpdateEmployees";
         public static async Task GetAllEmployees()
         {
-            string sqlCommand = "spGetAllEmployees";
             var employees = new List<Employee>();
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 try
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("spGetAllEmployees", connection))
+                    using (var command = new SqlCommand(spGetAllEmployees, connection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
                         using (var reader = await command.ExecuteReaderAsync())
@@ -52,18 +55,18 @@ namespace Application
                     $" Фамилия: {employee.LastName},\n " +
                     $" Эл. почта: {employee.Email},\n " +
                     $" День рождения: {employee.DataOfBirth},\n " +
-                    $" Зарплата:{employee.Salary}");
+                    $" Зарплата: {employee.Salary}");
                 Console.WriteLine(new string('-', 75));
             }
         }
         //========================================================================================================================
-        public static async Task<bool> GetEmployeeById(int employeeId)
+        private static async Task<bool> GetEmployeeById(int employeeId)
         {
             bool employeeExists = false;
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync();
-                using (SqlCommand command = new SqlCommand("spGetEmployeeById", connection))
+                using (SqlCommand command = new SqlCommand(spGetEmployeeById, connection))
                 {
                     command.CommandType = System.Data.CommandType.StoredProcedure;
                     command.Parameters.AddWithValue("@EmployeeID", employeeId);
@@ -139,20 +142,21 @@ namespace Application
             {
                 using var connection = new SqlConnection(connectionString);
                 await connection.OpenAsync();
-                using (var command = new SqlCommand("spAddEmployee", connection))
+                using (var command = new SqlCommand(spAddEmployee, connection))
                 {
                     command.CommandType = CommandType.StoredProcedure;
                     command.Parameters.AddWithValue("@FirstName", employee.FirstName);
                     command.Parameters.AddWithValue("@LastName", employee.LastName);
                     command.Parameters.AddWithValue("@Email", employee.Email);
                     command.Parameters.AddWithValue("@DateOfBirth", employee.DataOfBirth);
-                    command.Parameters.AddWithValue("@Salary", employee.Salary);
+                    command.Parameters.AddWithValue("@Salary", Math.Round(employee.Salary, 2));
 
                     try
                     {
                         await command.ExecuteNonQueryAsync();
                         Console.WriteLine();
                         Console.WriteLine("\n Добавлен новый сотрудник!");
+                        Console.WriteLine();
                     }
                     catch (Exception ex)
                     {
@@ -169,28 +173,17 @@ namespace Application
             bool employeeExists = false;
             try
             {
-                Console.WriteLine("Введите уникальный идентификатор сотрудника");
+                Console.WriteLine("\n Введите уникальный идентификатор сотрудника");
                 if (!int.TryParse(Console.ReadLine(), out int employeeId))
-                    Console.WriteLine("Не корректный формат идентификатора, требуется ввести числовое значение!");
+                    Console.WriteLine("\n Не корректный формат идентификатора, требуется ввести числовое значение!");
                 else
                 {
-                    using (SqlConnection connection = new SqlConnection(connectionString))
-                    {
-                        await connection.OpenAsync();
-                        using (SqlCommand command = new SqlCommand("spGetEmployeeById", connection))
-                        {
-                            command.CommandType = System.Data.CommandType.StoredProcedure;
-                            command.Parameters.AddWithValue("@EmployeeID", employeeId);
-                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
-                            {
-                                if (await reader.ReadAsync())
-                                    employeeExists = reader.GetBoolean(0);
-                            }
-                        }
-                    }
+                    employeeExists = await GetEmployeeById(employeeId);
                     if (!employeeExists)
-                        Console.WriteLine($"Сотрудника с таким идентификатором: {employeeId} нет в базе данных");
-
+                    {
+                        Console.WriteLine($"\n Сотрудника с таким идентификатором: {employeeId} нет в базе данных");
+                        return;
+                    }
                     Console.WriteLine("\n Выберите поле для обновления: ");
                     Console.WriteLine("1. Имя");
                     Console.WriteLine("2. Фамилия");
@@ -199,7 +192,7 @@ namespace Application
                     Console.WriteLine("5. Зарплата");
                     Console.WriteLine("6. Выход");
                     if (!int.TryParse(Console.ReadLine(), out int userChoice) || userChoice < 1 || userChoice > 6)
-                        Console.WriteLine("Не корректный формат выбора, требуется ввести числовое значение от 1 до 6");
+                        Console.WriteLine("\n Не корректный формат выбора, требуется ввести числовое значение от 1 до 6");
 
                     object fieldValue = null;
 
@@ -237,7 +230,7 @@ namespace Application
                         using (SqlConnection connection = new SqlConnection(connectionString))
                         {
                             await connection.OpenAsync();
-                            using (SqlCommand command = new SqlCommand("spUpdateEmployees", connection))
+                            using (SqlCommand command = new SqlCommand(spUpdateEmployees, connection))
                             {
                                 command.CommandType = CommandType.StoredProcedure;
 
@@ -266,6 +259,7 @@ namespace Application
                                 }
                                 await command.ExecuteNonQueryAsync();
                                 Console.WriteLine("\nИнформация о сотруднике успешно обновлена!");
+                                Console.WriteLine();
                             }
                         }
                     }
@@ -317,7 +311,7 @@ namespace Application
                                 {
                                     int.TryParse(result.ToString(), out int rowsAffected);
                                     if (rowsAffected > 0)
-                                        Console.WriteLine($"{rowsAffected} сотрудник успешно удален.");
+                                        Console.WriteLine($"\n {rowsAffected} сотрудник успешно удален.");
                                     else
                                         Console.WriteLine("Сотрудник не найден или не удален!");
                                 }
@@ -337,5 +331,6 @@ namespace Application
                 Console.WriteLine($"Возникла ошибка: {ex.Message}");
             }
         }
+        //========================================================================================================================
     }
 }
