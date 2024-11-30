@@ -6,7 +6,7 @@ namespace Application
 {
     public class EmployeeRepository
     {
-        private static readonly string connectionString = "Server=localhost;Database=EmployeeDB;Trusted_Connection=False;User Id=sa;Password=ILyaoff12345@;TrustServerCertificate=True";
+        private static readonly string connectionString = "Server=localhost;Database=EmployeeDB;Trusted_Connection=False;User Id=sa;Password=12345;TrustServerCertificate=True";
         private static readonly string spGetAllEmployees = "spGetAllEmployees";
         private static readonly string spGetEmployeeById = "spGetEmployeeById";
         private static readonly string spAddEmployee = "spAddEmployee";
